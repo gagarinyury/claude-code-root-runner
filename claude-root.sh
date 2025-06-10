@@ -1,25 +1,21 @@
 #!/bin/bash
-# Claude Code Root Runner - Simple version that works
-
-TEMP_USER="claude-temp"
-
-# Create temporary user if doesn't exist
-if ! id "$TEMP_USER" &>/dev/null; then
-    useradd -m -s /bin/bash "$TEMP_USER"
+# Создаём временного пользователя если его нет
+if ! id claude-temp &>/dev/null; then
+    useradd -m -s /bin/bash claude-temp
 fi
 
-# Copy Claude configuration if exists
+# Копируем конфигурацию Claude если есть
 if [ -d "$HOME/.config/claude" ]; then
-    mkdir -p "/home/$TEMP_USER/.config"
-    cp -r "$HOME/.config/claude" "/home/$TEMP_USER/.config/"
-    chown -R "$TEMP_USER:$TEMP_USER" "/home/$TEMP_USER/.config"
+    mkdir -p /home/claude-temp/.config
+    cp -r "$HOME/.config/claude" /home/claude-temp/.config/
+    chown -R claude-temp:claude-temp /home/claude-temp/.config
 fi
 
-# Find claude path
+# Находим путь к claude
 CLAUDE_PATH=$(which claude)
 if [ -z "$CLAUDE_PATH" ]; then
     CLAUDE_PATH="/root/.npm-global/bin/claude"
 fi
 
-# Run Claude from current directory as temporary user with full path
-su - "$TEMP_USER" -c "PATH=/root/.npm-global/bin:\$PATH cd '$PWD' && '$CLAUDE_PATH' --dangerously-skip-permissions $*"
+# Запускаем от имени обычного пользователя с полным путём
+su - claude-temp -c "PATH=/root/.npm-global/bin:$PATH $CLAUDE_PATH --dangerously-skip-permissions $*"
