@@ -67,21 +67,30 @@ download_script() {
     
     # Try curl first, then wget
     if command -v curl &> /dev/null; then
-        if curl -sSL "$REPO_URL/claude-root.sh" -o "$temp_file"; then
+        if curl -sSL "$REPO_URL/claude-root.sh" -o "$temp_file" >/dev/null 2>&1; then
             log_success "Downloaded using curl"
         else
             log_error "Failed to download with curl"
+            rm -f "$temp_file"
             exit 1
         fi
     elif command -v wget &> /dev/null; then
-        if wget -q "$REPO_URL/claude-root.sh" -O "$temp_file"; then
+        if wget -q "$REPO_URL/claude-root.sh" -O "$temp_file" >/dev/null 2>&1; then
             log_success "Downloaded using wget"
         else
             log_error "Failed to download with wget"
+            rm -f "$temp_file"
             exit 1
         fi
     else
         log_error "Neither curl nor wget available"
+        exit 1
+    fi
+    
+    # Verify file was downloaded
+    if [ ! -f "$temp_file" ] || [ ! -s "$temp_file" ]; then
+        log_error "Downloaded file is empty or missing"
+        rm -f "$temp_file"
         exit 1
     fi
     

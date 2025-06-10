@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="Claude Code Root Runner"
-VERSION="1.0.0"
+VERSION="1.0.1"
 TEMP_USER="claude-temp"
 
 # Colors for output
@@ -152,13 +152,31 @@ run_claude() {
         fi
     done
     
+    # Create a working directory that the user can access
+    local work_dir="/home/$TEMP_USER/work"
+    mkdir -p "$work_dir"
+    chown "$TEMP_USER:$TEMP_USER" "$work_dir"
+    
+    # Copy current directory contents if it's accessible
+    if [ -r "$PWD" ] && [ "$PWD" != "/root" ]; then
+        log_info "Copying current directory to working space..."
+        cp -r "$PWD"/* "$work_dir/" 2>/dev/null || true
+        chown -R "$TEMP_USER:$TEMP_USER" "$work_dir"
+    fi
+    
     # Run Claude with environment preservation
     su - "$TEMP_USER" -c "
         export PATH='$full_path'
         $env_vars
-        cd '$PWD'
+        cd '$work_dir'
         '$claude_path' --dangerously-skip-permissions $*
     "
+    
+    # Copy results back if working in /root
+    if [ "$PWD" = "/root" ] && [ -d "$work_dir" ]; then
+        log_info "Copying results back to original directory..."
+        cp -r "$work_dir"/* "$PWD/" 2>/dev/null || true
+    fi
 }
 
 cleanup() {
