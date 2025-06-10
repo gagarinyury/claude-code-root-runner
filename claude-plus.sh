@@ -43,11 +43,23 @@ if [ ! -x "$CLAUDE_PATH" ]; then
     exit 1
 fi
 
-# Give temporary user access to current directory
-chown -R "$TEMP_USER:$TEMP_USER" "$PWD" 2>/dev/null || true
+# For /root directory, work in a safe subdirectory
+if [ "$PWD" = "/root" ]; then
+    WORK_DIR="/root/claude-workspace"
+    mkdir -p "$WORK_DIR"
+    chown "$TEMP_USER:$TEMP_USER" "$WORK_DIR"
+    TARGET_DIR="$WORK_DIR"
+    echo "Working in safe directory: $WORK_DIR"
+else
+    # For other directories, use as-is
+    chown -R "$TEMP_USER:$TEMP_USER" "$PWD" 2>/dev/null || true
+    TARGET_DIR="$PWD"
+fi
 
-# Run Claude as non-root user in current directory
-su "$TEMP_USER" -c "cd '$PWD' && PATH=/root/.npm-global/bin:$PATH '$CLAUDE_PATH' --dangerously-skip-permissions $*"
+# Run Claude as non-root user in target directory
+su "$TEMP_USER" -c "cd '$TARGET_DIR' && PATH=/root/.npm-global/bin:$PATH '$CLAUDE_PATH' --dangerously-skip-permissions $*"
 
-# Restore ownership back to root
-chown -R root:root "$PWD" 2>/dev/null || true
+# Restore ownership (but not for /root itself)
+if [ "$PWD" != "/root" ]; then
+    chown -R root:root "$PWD" 2>/dev/null || true
+fi
