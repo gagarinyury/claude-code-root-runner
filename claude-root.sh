@@ -8,7 +8,7 @@
 set -euo pipefail
 
 SCRIPT_NAME="Claude Code Root Runner"
-VERSION="1.0.1"
+VERSION="1.0.2"
 TEMP_USER="claude-temp"
 
 # Colors for output

@@ -94,7 +94,8 @@ download_script() {
         exit 1
     fi
     
-    echo "$temp_file"
+    # Return only the file path, no other output
+    printf "%s" "$temp_file"
 }
 
 install_script() {
@@ -177,7 +178,25 @@ main() {
     check_dependencies
     
     local temp_file
-    temp_file=$(download_script)
+    temp_file=$(download_script 2>&1 | grep -v "$(printf '\033')" | tail -1)
+    
+    # If temp_file is empty or contains color codes, try alternative approach
+    if [ -z "$temp_file" ] || [[ "$temp_file" == *"$(printf '\033')"* ]]; then
+        log_warning "Fallback: downloading directly..."
+        temp_file=$(mktemp)
+        if command -v curl &> /dev/null; then
+            curl -sSL "$REPO_URL/claude-root.sh" -o "$temp_file" || {
+                log_error "Direct download failed"
+                exit 1
+            }
+        else
+            wget -q "$REPO_URL/claude-root.sh" -O "$temp_file" || {
+                log_error "Direct download failed" 
+                exit 1
+            }
+        fi
+        log_success "Direct download completed"
+    fi
     
     install_script "$temp_file"
     check_claude_cli
